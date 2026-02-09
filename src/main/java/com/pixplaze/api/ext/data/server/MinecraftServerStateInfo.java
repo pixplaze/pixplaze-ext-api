@@ -10,5 +10,16 @@ public record MinecraftServerStateInfo(
         Integer online,
         Double tps,
         Long uptime,
-        Boolean enabled
-) {}
+        Boolean enabled,
+        StateCode state
+) {
+    enum StateCode {
+        MAINTENANCE_ONLINE,
+        MAINTENANCE_OFFLINE,
+        ONLINE,
+        OFFLINE
+    }
+    public MinecraftServerStateInfo(Boolean enabled) {
+        this(null, null, null, enabled, StateCode.OFFLINE);
+    }
+}

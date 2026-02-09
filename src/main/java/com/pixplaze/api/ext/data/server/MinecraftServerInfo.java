@@ -3,6 +3,7 @@ package com.pixplaze.api.ext.data.server;
 import java.util.List;
 
 /// Represents plain Minecraft server of any core
+///
 /// @param address    server address
 /// @param name       simple server name
 /// @param thumbnail  Base64 server image string
@@ -23,4 +24,22 @@ public record MinecraftServerInfo(
         MinecraftServerCoreInfo core,
         MinecraftServerStateInfo state,
         List<String> plugins
-) {}
+) {
+    public MinecraftServerInfo(String address, Integer port, MinecraftServerStateInfo minecraftServerStateInfo) {
+        this(
+                address,
+                port,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                minecraftServerStateInfo,
+                null
+        );
+    }
+}
