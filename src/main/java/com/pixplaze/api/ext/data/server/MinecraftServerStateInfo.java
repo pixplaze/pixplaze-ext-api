@@ -1,25 +1,42 @@
 package com.pixplaze.api.ext.data.server;
 
+import com.pixplaze.api.ext.data.player.MinecraftPlayerListInfo;
+
 /// Represents the state of the Minecraft server with
 /// the most frequently changing data
-/// @param online  current number of players online
-/// @param tps     server TPS (ticks per second)
-/// @param uptime  milliseconds since Minecraft server started
-/// @param enabled if server is available on internet
+/// @param tps    server TPS (ticks per second)
+/// @param ping   server latency in milliseconds
+/// @param uptime milliseconds since Minecraft server started
+/// @param state  server current state
 public record MinecraftServerStateInfo(
-        Integer online,
         Double tps,
+        Long ping,
         Long uptime,
-        Boolean enabled,
-        StateCode state
+        String difficulty,
+        StateCode state,
+        MinecraftPlayerListInfo players
 ) {
-    enum StateCode {
-        MAINTENANCE_ONLINE,
-        MAINTENANCE_OFFLINE,
+    public enum StateCode {
+        MAINTENANCE,
         ONLINE,
         OFFLINE
     }
-    public MinecraftServerStateInfo(Boolean enabled) {
-        this(null, null, null, enabled, StateCode.OFFLINE);
+
+    public MinecraftServerStateInfo(StateCode state) {
+        this(null, null, null, null, state);
+    }
+
+    public MinecraftServerStateInfo(Double tps, Long ping, Long uptime) {
+        this(tps, ping, uptime, null, null, null);
+    }
+
+    public MinecraftServerStateInfo(
+            Double tps,
+            Long ping,
+            Long uptime,
+            String difficulty,
+            StateCode state
+    ) {
+        this(tps, ping, uptime, difficulty, state, null);
     }
 }
