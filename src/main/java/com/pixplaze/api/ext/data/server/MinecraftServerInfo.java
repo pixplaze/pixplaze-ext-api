@@ -9,10 +9,12 @@ import java.util.Map;
 /// @param motd simple server description
 /// @param favicon Base64 server image string
 public record MinecraftServerInfo(
+        Long id,
         String host,
         String motd,
         Boolean license,
         String favicon,
+        String description,
         MinecraftServerPortsInfo ports,
         MinecraftServerCoreInfo core,
         MinecraftServerStateInfo state,
@@ -25,7 +27,9 @@ public record MinecraftServerInfo(
 
     public MinecraftServerInfo(String host, MinecraftServerPortsInfo ports, MinecraftServerStateInfo minecraftServerStateInfo) {
         this(
+                null,
                 host,
+                null,
                 null,
                 null,
                 null,
