@@ -10,4 +10,8 @@ public record MinecraftPlayerInfo(
         Boolean whitelisted,
         Boolean operator,
         Long playtime
-) {}
+) {
+    public MinecraftPlayerInfo(UUID uuid, String username) {
+        this(uuid, username, null, null, null, null, null);
+    }
+}
