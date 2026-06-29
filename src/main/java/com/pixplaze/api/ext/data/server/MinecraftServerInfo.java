@@ -7,13 +7,13 @@ import java.util.Map;
 ///
 /// @param host server host
 /// @param motd simple server description
-/// @param favicon Base64 server image string
+/// @param iconBase64 Base64 server image string
 public record MinecraftServerInfo(
         Long id,
         String host,
         String motd,
         Boolean license,
-        String favicon,
+        String iconBase64,
         String description,
         MinecraftServerPortsInfo ports,
         MinecraftServerCoreInfo core,

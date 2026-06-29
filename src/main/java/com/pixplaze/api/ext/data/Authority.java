@@ -11,9 +11,6 @@ import java.util.Objects;
 /// - [Role] `role` — single privilege tier of the subject (*who*).
 /// - [Source] `source` — single provenance of the token (*where it was issued*),
 ///   and with it the trust level.
-/// - [Target] `targets` — **set** of zones the token is valid for (*where it may
-///   act*); plural, because one token may address several resource servers
-///   (e.g. an `AAD` token covers both [Target#MINECRAFT] and [Target#PIXPLAZE]).
 ///   Membership semantics: [#to] is satisfied if the zone is *among* the targets.
 /// - `permissions` — **set** of fine-grained, namespaced rights (*what exactly*).
 ///
@@ -33,9 +30,9 @@ import java.util.Objects;
 public class Authority {
 
     /// JWT claim names for each [Authority] dimension. Note that `TARGET` maps to
-    /// the standard `aud` (audience) claim — a [Target] *is* the token's audience.
+    /// the standard `aud` (audience) claim — a *is* the token's audience.
     public static class Claims {
-        public static final String ROLE = "role";
+        public static final String ROLE = "rls";
         public static final String SOURCE = "src";
         public static final String TARGET = "aud";
         public static final String PERMISSIONS = "perms";
@@ -44,12 +41,54 @@ public class Authority {
 
     /// Privilege tier of the subject (the *who*).
     public enum Role {
-        /// Regular player / profile owner.
-        USER,
-        /// Service (machine-to-machine) client — the Minecraft server itself.
-        APPLICATION,
-        /// Elevated subject — server operator / system administrator.
-        ADMINISTRATOR;
+        USER("RUSR", List.of(
+                "sys:profile.*",
+                "sys:servers.rating.*",
+                "sys:servers.list.read"
+        )), // ROLE_USER
+        ADMIN("RADM", List.of(
+                "sys:profile.*"
+        )), // ROLE_USER
+        SYSTEM("RSYS", List.of(
+                "sys:*"
+        )), // ROLE_SYSTEM
+        MINECRAFT_PLAYER("RMCP", List.of(
+                "mc:${target}:server.chat.read",
+                "mc:${target}:server.chat.write"
+        )), // ROLE_MINECRAFT_PLAYER
+        MINECRAFT_OPERATOR("RMCO", List.of(
+                "mc:${target}:server.chat.read",
+                "mc:${target}:server.chat.write",
+                "mc:${target}:server.console.read",
+                "mc:${target}:server.console.write"
+        )), // ROLE_MINECRAFT_OPERATOR
+        MINECRAFT_SERVER("RMCS", List.of(
+
+        )); // ROLE_MINECRAFT_SERVER
+
+        private final String code;
+        private final List<String> permissions;
+
+        Role(String code, List<String> permissions) {
+            this.code = code;
+            this.permissions = permissions;
+        }
+
+        public static Role of(String code) {
+            return switch (code) {
+                case "RUSR", "ROLE_USER", "USER" -> USER;
+                case "RADM", "ROLE_ADMIN", "ADMIN" -> ADMIN;
+                case "RSYS", "ROLE_SYSTEM", "SYSTEM" -> SYSTEM;
+                case "RMCP", "ROLE_MINECRAFT_PLAYER", "MINECRAFT_PLAYER" -> MINECRAFT_PLAYER;
+                case "RMCO", "ROLE_MINECRAFT_OPERATOR", "MINECRAFT_OPERATOR" -> MINECRAFT_OPERATOR;
+                case "RMCS", "ROLE_MINECRAFT_SERVER", "MINECRAFT_SERVER" -> MINECRAFT_SERVER;
+                default -> throw new IllegalStateException("Unexpected value: " + code);
+            };
+        }
+
+        public String code() {
+            return code;
+        }
     }
 
     /// Provenance of the token (the *where from*) and, with it, the trust level.
@@ -91,7 +130,6 @@ public class Authority {
         /// Any unknown value falls back to [#NOT_AUTHORIZED_DEVICE].
         public static Source of(int code) {
             return switch (code) {
-                case 0 -> NOT_AUTHORIZED_DEVICE;
                 case 1 -> APPLICATION_AUTHORIZED_DEVICE;
                 case 2 -> MINECRAFT_AUTHORIZED_DEVICE;
                 default -> NOT_AUTHORIZED_DEVICE;
@@ -99,27 +137,24 @@ public class Authority {
         }
     }
 
-    /// Audience zone the token is valid for (the *where to*) — materialized as the
-    public enum Target {
-        /// Backend / BFF: profiles, bindings, billing, server management.
-        PIXPLAZE,
-        /// Minecraft server (REST/WS): chat, console, commands, player/plugin lists.
-        MINECRAFT
-    }
-
     /// Fluent builder for [Authority]. Start from [Authority#as], set the provenance
     /// with [#from] and the zones with [#to], then finish with one of the
     /// `with*Permissions` methods. `role`, `source` and at least one `target` are
     /// mandatory and validated on build.
     public static class Builder {
-        final Role role;
+        List<Role> roles;
         Source source;
-        List<Target> targets;
+        List<String> targets;
         List<String> permissions;
 
-        Builder(Role role) {
-            this.role = role;
+        Builder(Role ... roles) {
+            this(Arrays.asList(roles));
+        }
+
+        Builder(List<Role> roles) {
+            this.roles = roles;
             this.targets = new ArrayList<>();
+            this.permissions = new ArrayList<>();
         }
 
         /// Sets the token [Source] (provenance).
@@ -128,13 +163,13 @@ public class Authority {
             return this;
         }
 
-        public Builder to(List<Target> targets) {
+        public Builder to(List<String> targets) {
             this.targets.addAll(targets.stream().filter(Objects::nonNull).toList());
             return this;
         }
 
-        /// Adds one or more [Target] zones; `null` entries are ignored.
-        public Builder to(Target ... target) {
+        /// Adds one or more target zones (audience); `null` entries are ignored.
+        public Builder to(String ... target) {
             to(Arrays.asList(target));
             return this;
         }
@@ -147,7 +182,7 @@ public class Authority {
         /// Builds an [Authority] carrying no fine-grained permissions.
         public Authority unauthorized() {
             return new Authority(
-                    validateRole(role),
+                    validateRoles(roles),
                     validateSource(source),
                     List.of(),
                     List.of()
@@ -158,7 +193,7 @@ public class Authority {
         /// TODO: currently identical to [#unauthorized] — no defaults are wired up yet.
         public Authority withDefaultPermissions() {
             return new Authority(
-                    validateRole(role),
+                    validateRoles(roles),
                     validateSource(source),
                     validateTargets(targets),
                     List.of()
@@ -167,25 +202,37 @@ public class Authority {
 
         /// Builds an [Authority] with the given fine-grained permissions.
         public Authority grant(String ... permissions) {
+            if (permissions.length == 0) {
+                final var defaultPermissions = new ArrayList<>();
+                for (var target : targets) {
+                    if (roles.contains(Role.MINECRAFT_PLAYER)) {
+
+                    }
+
+                    if (roles.contains(Role.MINECRAFT_OPERATOR)) {
+
+                    }
+                }
+            }
             return grant(Arrays.asList(permissions));
         }
 
         /// Builds an [Authority] with the given fine-grained permissions.
         public Authority grant(List<String> permissions) {
             return new Authority(
-                    validateRole(role),
+                    validateRoles(roles),
                     validateSource(source),
                     validateTargets(targets),
                     validatePermissions(permissions)
             );
         }
 
-        private Role validateRole(Role role) {
-            if (role == null) {
+        private List<Role> validateRoles(List<Role> roles) {
+            if (roles == null || roles.isEmpty()) {
                 throw new IllegalStateException("Role must be set by 'as(Role)'!");
             }
 
-            return role;
+            return roles;
         }
 
         private Source validateSource(Source source) {
@@ -196,7 +243,7 @@ public class Authority {
             return source;
         }
 
-        private List<Target> validateTargets(List<Target> targets) {
+        private List<String> validateTargets(List<String> targets) {
             if (targets.isEmpty()) {
                 throw new IllegalStateException("Targets must be set by 'to(Target)'!");
             }
@@ -213,38 +260,54 @@ public class Authority {
         }
     }
 
-    private final Role role;
+    private final List<Role> roles;
     private final Source source;
-    private final List<Target> targets;
+    private final List<String> targets;
     private final List<String> permissions;
 
-    private Authority(Role role, Source source, List<Target> targets, List<String> permissions) {
-        this.role = Objects.requireNonNull(role, "role must not be null!");
+    private Authority(List<Role> roles, Source source, List<String> targets, List<String> permissions) {
+        this.roles = Objects.requireNonNull(roles, "roles must not be null!");
         this.source = Objects.requireNonNull(source, "source must not be null!");
         this.targets = Objects.requireNonNull(targets, "targets must not be null!");
         this.permissions = Objects.requireNonNull(permissions, "permissions must not be null!");
     }
 
     /// Starts building an [Authority] for the given [Role].
-    public static Builder as(Role role) {
-        return new Builder(role);
+    public static Builder as(Role ... roles) {
+        return new Builder(roles);
     }
 
     /// Starts building an [Authority] from the given [Authority]
     public static Builder as(Authority authority) {
-        return new Builder(authority.role)
+        return new Builder(authority.roles)
                 .from(authority.source)
                 .to(authority.targets)
                 .permissions(authority.permissions);
     }
 
+    public List<Role> roles() {
+        return roles;
+    }
+
+    public Source source() {
+        return source;
+    }
+
+    public List<String> targets() {
+        return targets;
+    }
+
+    public List<String> permissions() {
+        return permissions;
+    }
+
     /// Returns `true` if this authority's role equals `role`.
     public boolean is(Role role) {
-        return this.role.equals(role);
+        return this.roles.contains(role);
     }
 
     /// Returns `true` if `target` is among this authority's zones.
-    public boolean to(Target target) {
+    public boolean to(String target) {
         return targets.contains(target);
     }
 
@@ -256,7 +319,7 @@ public class Authority {
     /// Returns `true` if this authority matches all three *zone* dimensions:
     /// `is(role) && from(source) && to(target)`. Does **not** consider
     /// `permissions` — check those separately (see class doc).
-    public boolean satisfies(Role role, Source source, Target target) {
+    public boolean satisfies(Role role, Source source, String target) {
         return is(role) && from(source) && to(target);
     }
 
@@ -264,10 +327,9 @@ public class Authority {
     /// `ROLE_<role>`, one `TARGET_<target>` per zone, `SOURCE_<source>`, plus the
     /// raw `permissions`.
     public List<String> describe() {
-        final var authorities = new ArrayList<String>();
-        authorities.add("ROLE_" + role.name());
+        final var authorities = new ArrayList<>(roles.stream().map(r -> "ROLE_" + r).toList());
         authorities.add("SOURCE_" + source.name());
-        authorities.addAll(targets.stream().map(t -> "TARGET_" + t.name()).toList());
+        authorities.addAll(targets.stream().map(t -> "TARGET_" + t).toList());
         authorities.addAll(permissions);
         return authorities;
     }

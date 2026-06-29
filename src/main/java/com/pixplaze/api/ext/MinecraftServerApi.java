@@ -6,7 +6,7 @@ import com.pixplaze.api.ext.data.server.MinecraftServerInfo;
 import com.pixplaze.api.ext.data.server.MinecraftServerStateInfo;
 
 import java.util.List;
-import java.util.Set;
+import java.util.List;
 
 /// Represents Minecraft server side API
 @SuppressWarnings("unused")
@@ -21,10 +21,10 @@ public interface MinecraftServerApi {
     List<MinecraftPluginInfo> getInstalledPlugins();
     List<MinecraftPluginInfo> getEnabledPlugins();
 
-    Set<MinecraftPlayerInfo> getOnlinePlayers();
-    Set<MinecraftPlayerInfo> getOfflinePlayers();
-    Set<MinecraftPlayerInfo> getBannedPlayers();
-    Set<MinecraftPlayerInfo> getWhitelistedPlayers();
-    Set<MinecraftPlayerInfo> getOpPlayers();
-    Set<MinecraftPlayerInfo> getAllPlayers();
+    List<MinecraftPlayerInfo> getOnlinePlayers();
+    List<MinecraftPlayerInfo> getOfflinePlayers();
+    List<MinecraftPlayerInfo> getBannedPlayers();
+    List<MinecraftPlayerInfo> getWhitelistedPlayers();
+    List<MinecraftPlayerInfo> getOpPlayers();
+    List<MinecraftPlayerInfo> getAllPlayers();
 }

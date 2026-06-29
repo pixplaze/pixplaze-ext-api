@@ -5,13 +5,16 @@ import java.util.UUID;
 public record MinecraftPlayerInfo(
         UUID uuid,
         String username,
+        String ipAddress,
         Boolean online,
-        Boolean banned,
-        Boolean whitelisted,
-        Boolean operator,
-        Long playtime
+        Boolean isBanned,
+        Boolean isWhitelisted,
+        Boolean isOperator,
+        Long playtime,
+        String skinBase64,
+        String skinHeadBase64
 ) {
-    public MinecraftPlayerInfo(UUID uuid, String username) {
-        this(uuid, username, null, null, null, null, null);
+    public MinecraftPlayerInfo(UUID uuid, String username, String ipAddress) {
+        this(uuid, username, ipAddress, null, null, null, null, null, null, null);
     }
 }
