@@ -6,9 +6,8 @@ import com.pixplaze.api.ext.data.server.MinecraftServerInfo;
 import com.pixplaze.api.ext.data.server.MinecraftServerStateInfo;
 
 import java.util.List;
-import java.util.List;
 
-/// Represents Minecraft server side API
+/// API a Minecraft server exposes about itself (implemented by the Pixplaze plugin).
 @SuppressWarnings("unused")
 public interface MinecraftServerApi {
 

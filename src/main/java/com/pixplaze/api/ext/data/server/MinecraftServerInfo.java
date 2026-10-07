@@ -1,56 +1,93 @@
 package com.pixplaze.api.ext.data.server;
 
+import com.pixplaze.api.ext.data.plugin.MinecraftPluginInfo;
 import io.soabase.recordbuilder.core.RecordBuilder;
 
 import java.util.List;
+import java.util.Optional;
 
-/// Represents plain Minecraft server of any core
+/// Minecraft server of any core.
 ///
-/// @param host server host
-/// @param motd simple server description
-/// @param iconBase64 Base64 server image string
+/// The description changes rarely; what changes from sample to sample lives in [#state]. Every
+/// description field has a single source: `motd`, `iconBase64` and `core` are learned by pinging
+/// the server over the Minecraft protocol, `isLicense` comes from the plugin heartbeat
+/// ([#heartbeat]), `hosts` only from registration and re-authorization.
+///
+/// Views: [#preview], [#connection], [#heartbeat].
+///
+/// @param id          Pixplaze server id
+/// @param name        display name chosen on registration
+/// @param motd        message of the day as shown in the Minecraft server list
+/// @param isLicense   whether the server checks accounts with Mojang (`online-mode`)
+/// @param iconBase64  server icon, Base64 PNG
+/// @param description long description written by the owner
+/// @param hosts       server endpoints, at most one per [MinecraftServerHostInfo.Type]
+/// @param core        server core, e.g. Paper 1.21.4
+/// @param state       frequently changing state
+/// @param plugins     installed plugins
+/// @param rating      average user rating
+/// @param ratingCount number of user ratings
 @RecordBuilder
 public record MinecraftServerInfo(
         Long id,
         String name,
-        String host,
         String motd,
-        Boolean license,
+        Boolean isLicense,
         String iconBase64,
         String description,
-        MinecraftServerPortsInfo ports,
+        List<MinecraftServerHostInfo> hosts,
         MinecraftServerCoreInfo core,
         MinecraftServerStateInfo state,
-        List<String> plugins,
+        List<MinecraftPluginInfo> plugins,
         Double rating,
         Long ratingCount
 ) implements MinecraftServerInfoBuilder.With {
 
-    /// Инварианты контракта в одном месте: {@code plugins} — иммутабельная защитная копия.
-    /// Через этот конструктор проходят и билдер, и {@code with*}-методы.
+    /// `hosts` and `plugins` are immutable defensive copies. The builder and the `with*` methods
+    /// go through this constructor too.
     public MinecraftServerInfo {
+        hosts = hosts == null ? null : List.copyOf(hosts);
         plugins = plugins == null ? null : List.copyOf(plugins);
     }
 
-    /// Точка входа в билдер прямо с рекорда: {@code MinecraftServerInfo.builder()...build()}.
+    /// Builder entry point: `MinecraftServerInfo.builder()...build()`.
     public static MinecraftServerInfoBuilder builder() {
         return MinecraftServerInfoBuilder.builder();
     }
 
-    /// Билдер-копия существующего инстанса: {@code MinecraftServerInfo.builder(existing).host(x).build()}.
+    /// Builder pre-filled with a copy of `from`: `MinecraftServerInfo.builder(existing).name(x).build()`.
     public static MinecraftServerInfoBuilder builder(MinecraftServerInfo from) {
         return MinecraftServerInfoBuilder.builder(from);
     }
 
-    public static MinecraftServerInfo preview(String name, String host, Integer port, String icon) {
+    /// Preview of a server being registered: name, game address and icon.
+    public static MinecraftServerInfo preview(String name, String address, Integer port, String iconBase64) {
         return builder()
                 .name(name)
-                .host(host)
-                .ports(new MinecraftServerPortsInfo(port))
-                .iconBase64(icon).build();
+                .hosts(List.of(MinecraftServerHostInfo.server(address, port)))
+                .iconBase64(iconBase64).build();
     }
 
-    public static MinecraftServerInfo connection(String host, Integer port) {
-        return builder().host(host).ports(new MinecraftServerPortsInfo(port)).build();
+    /// Game address only: what is needed to connect to or ping the server.
+    public static MinecraftServerInfo connection(String address, Integer port) {
+        return builder().hosts(List.of(MinecraftServerHostInfo.server(address, port))).build();
+    }
+
+    /// Plugin heartbeat body: only what the plugin is responsible for — the license flag and the
+    /// state ([MinecraftServerStateInfo#heartbeat]). No id, name, hosts, motd, core or icon: the id
+    /// is taken from the token, hosts change only on re-authorization, and motd, core and icon are
+    /// learned by ping.
+    public static MinecraftServerInfo heartbeat(Boolean isLicense, MinecraftServerStateInfo state) {
+        return builder()
+                .isLicense(isLicense)
+                .state(state)
+                .build();
+    }
+
+    /// Endpoint of the given type, if the server declared one.
+    public Optional<MinecraftServerHostInfo> host(MinecraftServerHostInfo.Type type) {
+        return hosts == null
+                ? Optional.empty()
+                : hosts.stream().filter(host -> host.type() == type).findFirst();
     }
 }

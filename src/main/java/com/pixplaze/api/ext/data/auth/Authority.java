@@ -1,4 +1,4 @@
-package com.pixplaze.api.ext.data;
+package com.pixplaze.api.ext.data.auth;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -23,20 +23,31 @@ import java.util.Objects;
 ///
 /// | Java field   | JWT claim ([Claims]) | Spring authority ([#describe]) |
 /// |--------------|----------------------|--------------------------------|
-/// | `role`       | `role`               | `ROLE_*`                       |
+/// | `role`       | `rls`                | `ROLE_*`                       |
 /// | `source`     | `src`                | `SOURCE_*`                     |
 /// | `targets`    | `aud`                | `TARGET_*`                     |
 /// | `permissions`| `perms`              | (raw strings)                  |
 public class Authority {
 
-    /// JWT claim names for each [Authority] dimension. Note that `TARGET` maps to
-    /// the standard `aud` (audience) claim — a *is* the token's audience.
+    /// JWT claim names: one per [Authority] dimension plus the subject's identity. Note that
+    /// `TARGET` maps to the standard `aud` (audience) claim — a target *is* the token's audience.
     public static class Claims {
         public static final String ROLE = "rls";
         public static final String SOURCE = "src";
         public static final String TARGET = "aud";
         public static final String PERMISSIONS = "perms";
+        /// Id of the profile the subject belongs to (profile and Minecraft player tokens).
+        public static final String PROFILE_ID = "pid";
+        /// Minecraft context object, keys are in [Minecraft].
         public static final String MINECRAFT_CONTEXT = "mc";
+
+        /// Keys of the [#MINECRAFT_CONTEXT] object.
+        public static class Minecraft {
+            /// Minecraft server id: in server and player tokens.
+            public static final String SERVER_ID = "sid";
+            /// Minecraft player UUID: in player tokens.
+            public static final String PLAYER_UUID = "uuid";
+        }
     }
 
     /// Privilege tier of the subject (the *who*).

@@ -6,18 +6,15 @@
 
     <groupId>com.pixplaze.api</groupId>
     <artifactId>pixplaze-ext-api</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <maven.compiler.release>17</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <record-builder.version>53</record-builder.version>
     </properties>
 
     <dependencies>
-        <!-- Аннотации @RecordBuilder. Retention=SOURCE → отсутствуют в байткоде ext-api.
-             scope=provided → не транзитивны: зависимые проекты их не наследуют и не тянут. -->
         <dependency>
             <groupId>io.soabase.record-builder</groupId>
             <artifactId>record-builder-core</artifactId>
@@ -33,8 +30,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.14.0</version>
                 <configuration>
-                    <!-- Процессор объявлен только здесь, а не в <dependencies> →
-                         используется исключительно при сборке ext-api, в артефакт и к потребителям не попадает. -->
                     <annotationProcessorPaths>
                         <path>
                             <groupId>io.soabase.record-builder</groupId>

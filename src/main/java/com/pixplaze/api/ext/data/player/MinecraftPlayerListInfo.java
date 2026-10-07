@@ -4,15 +4,14 @@ import io.soabase.recordbuilder.core.RecordBuilder;
 
 import java.util.List;
 
-
-/// Represents Minecraft Server player list
+/// Players of a Minecraft server.
 ///
-/// @param max maximum number of online players on the server
-/// @param online number of players currently on the server
-/// @param list list of online players on the server
-/// @param whitelist list of players added to whitelist on the server
-/// @param banned list of isBanned players on the server
-///
+/// @param max       maximum number of players online
+/// @param online    number of players online now
+/// @param list      players online now
+/// @param whitelist players on the whitelist
+/// @param banned    banned players
+/// @param operators server operators
 @RecordBuilder
 public record MinecraftPlayerListInfo(
         Integer max,
@@ -23,8 +22,8 @@ public record MinecraftPlayerListInfo(
         List<MinecraftPlayerInfo> operators
 ) implements MinecraftPlayerListInfoBuilder.With {
 
-    /// Инварианты контракта в одном месте: списки — иммутабельные защитные копии.
-    /// Через этот конструктор проходят и билдер, и {@code with*}-методы.
+    /// The lists are immutable defensive copies. The builder and the `with*` methods go through
+    /// this constructor too.
     public MinecraftPlayerListInfo {
         list = list == null ? null : List.copyOf(list);
         whitelist = whitelist == null ? null : List.copyOf(whitelist);
@@ -32,16 +31,17 @@ public record MinecraftPlayerListInfo(
         operators = operators == null ? null : List.copyOf(operators);
     }
 
-    /// Точка входа в билдер прямо с рекорда: {@code MinecraftPlayerListInfo.builder()...build()}.
+    /// Builder entry point: `MinecraftPlayerListInfo.builder()...build()`.
     public static MinecraftPlayerListInfoBuilder builder() {
         return MinecraftPlayerListInfoBuilder.builder();
     }
 
-    /// Билдер-копия существующего инстанса.
+    /// Builder pre-filled with a copy of `from`.
     public static MinecraftPlayerListInfoBuilder builder(MinecraftPlayerListInfo from) {
         return MinecraftPlayerListInfoBuilder.builder(from);
     }
 
+    /// Counters only, no player lists.
     public MinecraftPlayerListInfo(Integer max, Integer online) {
         this(max, online, null, null, null, null);
     }
