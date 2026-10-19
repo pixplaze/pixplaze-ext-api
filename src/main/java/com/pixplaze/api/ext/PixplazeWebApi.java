@@ -1,6 +1,7 @@
 package com.pixplaze.api.ext;
 
-import com.pixplaze.api.ext.data.server.MinecraftServerInfo;
+import com.pixplaze.api.ext.data.server.MinecraftServerHeartbeatInfo;
+import com.pixplaze.api.ext.data.server.MinecraftServerHeartbeatResponse;
 
 /// Pixplaze API client of a Minecraft server.
 ///
@@ -23,8 +24,9 @@ public interface PixplazeWebApi {
     /// signing key comes with every token pair, refresh included.
     DeviceAuthorization authorization();
 
-    /// Sends the plugin heartbeat ([MinecraftServerInfo#heartbeat]).
+    /// Sends the plugin heartbeat. If the response asks for players
+    /// ([MinecraftServerHeartbeatResponse#isPlayersRequired]), send it again at once with the player list.
     ///
     /// @param accessToken server access token
-    void heartbeat(String accessToken, MinecraftServerInfo heartbeat);
+    MinecraftServerHeartbeatResponse heartbeat(String accessToken, MinecraftServerHeartbeatInfo heartbeat);
 }

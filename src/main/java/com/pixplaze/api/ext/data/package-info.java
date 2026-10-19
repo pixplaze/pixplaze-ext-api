@@ -23,8 +23,8 @@
 ///
 /// One record serves several views of the same data. A frequently used view is a named static
 /// factory on the record that fills only the fields of that view, e.g.
-/// [com.pixplaze.api.ext.data.server.MinecraftServerInfo#heartbeat],
 /// [com.pixplaze.api.ext.data.server.MinecraftServerInfo#preview],
+/// [com.pixplaze.api.ext.data.player.MinecraftPlayerInfo#presence],
 /// [com.pixplaze.api.ext.data.server.MinecraftServerStateInfo#heartbeat]. Prefer such a factory
 /// to a builder when sending data.
 ///

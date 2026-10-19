@@ -10,7 +10,4 @@ public interface DeviceAuthorization {
 
     /// Minecraft player sign-in (scope `MAD:MINECRAFT_PLAYER`).
     DeviceAuthorizationClient<MinecraftPlayerAuthorizationDetails, AuthorizationTokenInfo> player();
-
-    /// Minecraft operator sign-in (scope `MAD:MINECRAFT_OPERATOR`).
-    DeviceAuthorizationClient<MinecraftPlayerAuthorizationDetails, AuthorizationTokenInfo> operator();
 }

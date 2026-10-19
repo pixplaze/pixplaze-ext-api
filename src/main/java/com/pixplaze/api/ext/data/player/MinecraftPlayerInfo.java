@@ -16,6 +16,10 @@ import java.util.UUID;
 /// @param playtime       time played on the server, milliseconds
 /// @param skinBase64     skin texture, Base64 PNG
 /// @param skinHeadBase64 skin head image, Base64 PNG
+/// @param isHidden       whether the player hides from others on the server (vanish): friends do
+///                       not see such a player online
+///
+/// Views: [#presence].
 @RecordBuilder
 public record MinecraftPlayerInfo(
         UUID uuid,
@@ -27,7 +31,8 @@ public record MinecraftPlayerInfo(
         Boolean isOperator,
         Long playtime,
         String skinBase64,
-        String skinHeadBase64
+        String skinHeadBase64,
+        Boolean isHidden
 ) implements MinecraftPlayerInfoBuilder.With {
 
     /// Builder entry point: `MinecraftPlayerInfo.builder()...build()`.
@@ -41,6 +46,18 @@ public record MinecraftPlayerInfo(
     }
 
     public MinecraftPlayerInfo(UUID uuid, String username, String ipAddress) {
-        this(uuid, username, ipAddress, null, null, null, null, null, null, null);
+        this(uuid, username, ipAddress, null, null, null, null, null, null, null, null);
+    }
+
+    /// Player in the heartbeat snapshot ([com.pixplaze.api.ext.data.server.MinecraftServerHeartbeatInfo]):
+    /// an online player with the nickname, operator and vanish flags only.
+    public static MinecraftPlayerInfo presence(UUID uuid, String username, Boolean isOperator, Boolean isHidden) {
+        return builder()
+                .uuid(uuid)
+                .username(username)
+                .isOnline(true)
+                .isOperator(isOperator)
+                .isHidden(isHidden)
+                .build();
     }
 }

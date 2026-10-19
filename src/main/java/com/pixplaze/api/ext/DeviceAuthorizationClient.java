@@ -4,7 +4,7 @@ import com.pixplaze.api.ext.data.auth.AuthorizationDetails;
 import com.pixplaze.api.ext.data.auth.AuthorizationToken;
 
 /// Device flow (RFC 8628) of one subject kind: binds its authorization details `D` to the tokens `T`
-/// it issues. Obtained from [PixplazeWebApi#server], [PixplazeWebApi#player] or [PixplazeWebApi#operator].
+/// it issues. Obtained from [DeviceAuthorization#server] or [DeviceAuthorization#player].
 ///
 /// @param <D> authorization details of the subject
 /// @param <T> token pair the flow issues
