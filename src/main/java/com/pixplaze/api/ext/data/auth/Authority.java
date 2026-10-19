@@ -26,7 +26,9 @@ import java.util.Objects;
 /// | `role`       | `rls`                | `ROLE_*`                       |
 /// | `source`     | `src`                | `SOURCE_*`                     |
 /// | `targets`    | `aud`                | `TARGET_*`                     |
-/// | `permissions`| `perms`              | (raw strings)                  |
+/// | `permissions`| — (never in a token) | (raw strings)                  |
+///
+/// The claims codec is [AuthorityClaims].
 public class Authority {
 
     /// JWT claim names: one per [Authority] dimension plus the subject's identity. Note that
@@ -35,7 +37,6 @@ public class Authority {
         public static final String ROLE = "rls";
         public static final String SOURCE = "src";
         public static final String TARGET = "aud";
-        public static final String PERMISSIONS = "perms";
         /// Id of the profile the subject belongs to (profile and Minecraft player tokens).
         public static final String PROFILE_ID = "pid";
         /// Minecraft context object, keys are in [Minecraft].
@@ -47,42 +48,26 @@ public class Authority {
             public static final String SERVER_ID = "sid";
             /// Minecraft player UUID: in player tokens.
             public static final String PLAYER_UUID = "uuid";
+            /// Minecraft player name: in plugin access tokens, for the `sub` player.
+            public static final String PLAYER_NAME = "name";
         }
     }
 
-    /// Privilege tier of the subject (the *who*).
+    /// Privilege tier of the subject (the *who*). Only the code: the role → permission mapping
+    /// lives in the `role_permission` table of web-api.
     public enum Role {
-        USER("RUSR", List.of(
-                "sys:profile.*",
-                "sys:servers.rating.*",
-                "sys:servers.list.read"
-        )), // ROLE_USER
-        ADMIN("RADM", List.of(
-                "sys:profile.*"
-        )), // ROLE_USER
-        SYSTEM("RSYS", List.of(
-                "sys:*"
-        )), // ROLE_SYSTEM
-        MINECRAFT_PLAYER("RMCP", List.of(
-                "mc:${target}:server.chat.read",
-                "mc:${target}:server.chat.write"
-        )), // ROLE_MINECRAFT_PLAYER
-        MINECRAFT_OPERATOR("RMCO", List.of(
-                "mc:${target}:server.chat.read",
-                "mc:${target}:server.chat.write",
-                "mc:${target}:server.console.read",
-                "mc:${target}:server.console.write"
-        )), // ROLE_MINECRAFT_OPERATOR
-        MINECRAFT_SERVER("RMCS", List.of(
-
-        )); // ROLE_MINECRAFT_SERVER
+        USER("RUSR"), // ROLE_USER
+        ADMIN("RADM"), // ROLE_ADMIN
+        SYSTEM("RSYS"), // ROLE_SYSTEM
+        MINECRAFT_PLAYER("RMPL"), // ROLE_MINECRAFT_PLAYER
+        MINECRAFT_OPERATOR("RMOP"), // ROLE_MINECRAFT_OPERATOR
+        MINECRAFT_OWNER("RMOW"), // ROLE_MINECRAFT_OWNER
+        MINECRAFT_SERVER("RMSV"); // ROLE_MINECRAFT_SERVER
 
         private final String code;
-        private final List<String> permissions;
 
-        Role(String code, List<String> permissions) {
+        Role(String code) {
             this.code = code;
-            this.permissions = permissions;
         }
 
         public static Role of(String code) {
@@ -90,9 +75,10 @@ public class Authority {
                 case "RUSR", "ROLE_USER", "USER" -> USER;
                 case "RADM", "ROLE_ADMIN", "ADMIN" -> ADMIN;
                 case "RSYS", "ROLE_SYSTEM", "SYSTEM" -> SYSTEM;
-                case "RMCP", "ROLE_MINECRAFT_PLAYER", "MINECRAFT_PLAYER" -> MINECRAFT_PLAYER;
-                case "RMCO", "ROLE_MINECRAFT_OPERATOR", "MINECRAFT_OPERATOR" -> MINECRAFT_OPERATOR;
-                case "RMCS", "ROLE_MINECRAFT_SERVER", "MINECRAFT_SERVER" -> MINECRAFT_SERVER;
+                case "RMPL", "ROLE_MINECRAFT_PLAYER", "MINECRAFT_PLAYER" -> MINECRAFT_PLAYER;
+                case "RMOP", "ROLE_MINECRAFT_OPERATOR", "MINECRAFT_OPERATOR" -> MINECRAFT_OPERATOR;
+                case "RMOW", "ROLE_MINECRAFT_OWNER", "MINECRAFT_OWNER" -> MINECRAFT_OWNER;
+                case "RMSV", "ROLE_MINECRAFT_SERVER", "MINECRAFT_SERVER" -> MINECRAFT_SERVER;
                 default -> throw new IllegalStateException("Unexpected value: " + code);
             };
         }
@@ -110,7 +96,10 @@ public class Authority {
         APPLICATION_AUTHORIZED_DEVICE("AAD"),
         /// `MAD` — issued on the Minecraft server's initiative (RFC 8628); limited,
         /// calls the BFF only and does not take part in Minecraft-side checks.
-        MINECRAFT_AUTHORIZED_DEVICE("MAD");
+        MINECRAFT_AUTHORIZED_DEVICE("MAD"),
+        /// `SAD` — issued by web-api to itself for its own calls to a plugin, no device behind it.
+        /// web-api never accepts such a token from a client.
+        SYSTEM_AUTHORIZED_DEVICE("SAD");
 
         private final String code;
 
@@ -133,16 +122,18 @@ public class Authority {
             return switch (code.toUpperCase()) {
                 case "MAD", "MINECRAFT_AUTHORIZED_DEVICE" -> MINECRAFT_AUTHORIZED_DEVICE;
                 case "AAD", "APPLICATION_AUTHORIZED_DEVICE" -> APPLICATION_AUTHORIZED_DEVICE;
+                case "SAD", "SYSTEM_AUTHORIZED_DEVICE" -> SYSTEM_AUTHORIZED_DEVICE;
                 default -> NOT_AUTHORIZED_DEVICE;
             };
         }
 
-        /// Parses a [Source] from its numeric code (`0` = NAD, `1` = AAD, `2` = MAD).
+        /// Parses a [Source] from its numeric code (`0` = NAD, `1` = AAD, `2` = MAD, `3` = SAD).
         /// Any unknown value falls back to [#NOT_AUTHORIZED_DEVICE].
         public static Source of(int code) {
             return switch (code) {
                 case 1 -> APPLICATION_AUTHORIZED_DEVICE;
                 case 2 -> MINECRAFT_AUTHORIZED_DEVICE;
+                case 3 -> SYSTEM_AUTHORIZED_DEVICE;
                 default -> NOT_AUTHORIZED_DEVICE;
             };
         }
@@ -211,30 +202,21 @@ public class Authority {
             );
         }
 
-        /// Builds an [Authority] with the given fine-grained permissions.
+        /// Builds an [Authority] with the given fine-grained permissions (constants of
+        /// [Permissions]); none — an authority with roles only.
         public Authority grant(String ... permissions) {
-            if (permissions.length == 0) {
-                final var defaultPermissions = new ArrayList<>();
-                for (var target : targets) {
-                    if (roles.contains(Role.MINECRAFT_PLAYER)) {
-
-                    }
-
-                    if (roles.contains(Role.MINECRAFT_OPERATOR)) {
-
-                    }
-                }
-            }
             return grant(Arrays.asList(permissions));
         }
 
-        /// Builds an [Authority] with the given fine-grained permissions.
+        /// Builds an [Authority] with the given fine-grained permissions added to those already
+        /// in the builder (see [Authority#as(Authority)]); `null` entries are ignored.
         public Authority grant(List<String> permissions) {
+            permissions(validatePermissions(permissions));
             return new Authority(
                     validateRoles(roles),
                     validateSource(source),
                     validateTargets(targets),
-                    validatePermissions(permissions)
+                    List.copyOf(this.permissions)
             );
         }
 

@@ -5,7 +5,7 @@ import io.soabase.recordbuilder.core.RecordBuilder;
 import java.util.UUID;
 
 /// Authorization details of a Minecraft player signing in through the device flow
-/// (scopes `MAD:MINECRAFT_PLAYER` and `MAD:MINECRAFT_OPERATOR`).
+/// (scope `MAD:MINECRAFT_PLAYER`).
 ///
 /// @param minecraftServerId id of the server the player plays on; required, the server must exist and not be banned
 /// @param ipAddress         player's IP address; required

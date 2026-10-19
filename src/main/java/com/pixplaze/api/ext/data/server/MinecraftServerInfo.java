@@ -11,9 +11,9 @@ import java.util.Optional;
 /// The description changes rarely; what changes from sample to sample lives in [#state]. Every
 /// description field has a single source: `motd`, `iconBase64` and `core` are learned by pinging
 /// the server over the Minecraft protocol, `isLicense` comes from the plugin heartbeat
-/// ([#heartbeat]), `hosts` only from registration and re-authorization.
+/// ([MinecraftServerHeartbeatInfo]), `hosts` only from registration and re-authorization.
 ///
-/// Views: [#preview], [#connection], [#heartbeat].
+/// Views: [#preview], [#connection], [#brief].
 ///
 /// @param id          Pixplaze server id
 /// @param name        display name chosen on registration
@@ -73,15 +73,9 @@ public record MinecraftServerInfo(
         return builder().hosts(List.of(MinecraftServerHostInfo.server(address, port))).build();
     }
 
-    /// Plugin heartbeat body: only what the plugin is responsible for — the license flag and the
-    /// state ([MinecraftServerStateInfo#heartbeat]). No id, name, hosts, motd, core or icon: the id
-    /// is taken from the token, hosts change only on re-authorization, and motd, core and icon are
-    /// learned by ping.
-    public static MinecraftServerInfo heartbeat(Boolean isLicense, MinecraftServerStateInfo state) {
-        return builder()
-                .isLicense(isLicense)
-                .state(state)
-                .build();
+    /// Brief: id, name and endpoints, the rest is `null` — where a server is only referred to (e.g. where a player is online).
+    public static MinecraftServerInfo brief(Long id, String name, List<MinecraftServerHostInfo> hosts) {
+        return builder().id(id).name(name).hosts(hosts).build();
     }
 
     /// Endpoint of the given type, if the server declared one.
