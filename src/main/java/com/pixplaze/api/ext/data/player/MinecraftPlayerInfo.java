@@ -15,7 +15,8 @@ import java.util.UUID;
 /// @param isOperator     whether the player is a server operator
 /// @param playtime       time played on the server, milliseconds
 /// @param skinBase64     skin texture, Base64 PNG
-/// @param skinHeadBase64 skin head image, Base64 PNG
+/// @param skinHeadBase64 skin head image as players on the server see it: 8×8 face with the hat layer,
+///                       Base64 PNG without the `data:` prefix
 /// @param isHidden       whether the player hides from others on the server (vanish): friends do
 ///                       not see such a player online
 ///
@@ -50,14 +51,17 @@ public record MinecraftPlayerInfo(
     }
 
     /// Player in the heartbeat snapshot ([com.pixplaze.api.ext.data.server.MinecraftServerHeartbeatInfo]):
-    /// an online player with the nickname, operator and vanish flags only.
-    public static MinecraftPlayerInfo presence(UUID uuid, String username, Boolean isOperator, Boolean isHidden) {
+    /// an online player with the nickname, operator and vanish flags and the skin head; the head is
+    /// `null` until the plugin has loaded it, or when the player has no skin texture (default skin).
+    public static MinecraftPlayerInfo presence(UUID uuid, String username, Boolean isOperator, Boolean isHidden,
+                                               String skinHeadBase64) {
         return builder()
                 .uuid(uuid)
                 .username(username)
                 .isOnline(true)
                 .isOperator(isOperator)
                 .isHidden(isHidden)
+                .skinHeadBase64(skinHeadBase64)
                 .build();
     }
 }
